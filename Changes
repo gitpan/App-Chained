@@ -1,4 +1,22 @@
-commit 59cd5c8ee00afc8a1b0187096b7a8b8155e99916 (HEAD, master)
+commit 809adfa6bb8e763b541c040f72a2b249ca2cce45 (HEAD, master)
+Author: nadim khemir <nkh@cpan.org>
+Date:   Thu Apr 29 21:00:04 2010 +0200
+
+    FIXED: removed spurious code chunk
+
+commit 0f0f8253936518f251c92ef557ef77409404ac2c
+Author: nadim khemir <nkh@cpan.org>
+Date:   Thu Apr 29 20:31:06 2010 +0200
+
+    CHANGED: module documentation and added complete examples
+
+commit dc966405e1d6180b1d75671e2430a551b77bc29c
+Author: nadim khemir <nkh@cpan.org>
+Date:   Thu Apr 29 07:38:42 2010 +0200
+
+    ADDED: examples for a wrapped module and application
+
+commit 59cd5c8ee00afc8a1b0187096b7a8b8155e99916
 Author: nadim khemir <nkh@cpan.org>
 Date:   Wed Apr 28 11:41:15 2010 +0200
 

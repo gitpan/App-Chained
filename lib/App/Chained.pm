@@ -29,7 +29,9 @@ Readonly my $EMPTY_STRING => q{} ;
 Readonly my $SCALAR => q{} ;
 
 use Carp qw(carp croak confess) ;
-use List::MoreUtils qw(any none) ;
+use List::MoreUtils qw(any none first_index) ;
+use Getopt::Long ;
+	
 
 #-------------------------------------------------------------------------------
 
@@ -39,86 +41,56 @@ App::Chained - Wrapper to sub applications in the Git fashion - No modification 
 
 =head1 SYNOPSIS
 
- =head1 NAME
- 	
- my_app - Frontend to my_app commands
+A complete example can be found in I< test_wrapper.p test_application test_module.pm test_templatel> in the distribution.
+
+ package App::Chained::Test ;
+ use parent 'App::Chained' ;
+ our $VERSION = '0.03' ;
  
- =head1 SYNOPSIS
+ =head1 THIS WRAPPER DOCUMENTATION
  
-  $> my_app [options]
-  $> my_app help
-  $> my_app help command
- 
- =head1 DESCRIPTION
- 
- The B<my_app> application allows you ....
- ...
+ This will be automatically extracted as we set the B<help> fields to B<\&App::Chained::get_help_from_pod> 
  
  =cut
- 
- package App::Chained::Test ;
- 
- use strict ;
- use warnings ;
- 
- use parent 'App::Chained' ;
- 
- our $VERSION = '0.02' ;
- 
+
  sub run
  {
  my ($invocant, @setup_data) = @_ ;
  
- my $class = ref($invocant) || $invocant ;
- confess 'Invalid constructor call!' unless defined $class ;
- 
  my $chained_app = 
- 	App::Chained->new
+	App::Chained->new
 		(
-		INTERACTION => {WARN => sub {warn @_}},
-		
+		help => \&App::Chained::get_help_from_pod, 
 		version =>  $VERSION,
-		help => \&App::Chained::get_help_from_pod, # extract the help from my_app
-		apropos => undef, # will use apropos from the sub commands if undefined
+		apropos => undef,
 		faq => undef,
-		
-		getopt_data =>
-			[
-				['an_option|o=s' => \my $option, 'description', 'long description'],
-				...
-			],
+		getopt_data => [] ;
 		
 		sub_apps =>
 			{
-			check =>
+			test_application =>
 				{
-				description => 'does a check',
+				description => 'executable',
 				run =>
 					sub
 					{
 					my ($self, $command, $arguments) =  @_ ;
-					system 'ra_check.pl ' . join(' ', @{$arguments}) ;
+					system './test_application ' . join(' ', @{$arguments}) ;
 					},
-					
-				help => sub {system "ra_check.pl --help"},
-				apropos => [qw(verify check error test)],
-				options => sub{ ... },
+				...
 				},
-			...
 			},
 			
 		@setup_data,
-		) ;
+ 		) ;
  
  bless $chained_app, $class ;
-
+ 
  $chained_app->parse_command_line() ;
-
- # run the command
  $chained_app->SUPER::run() ;
  }
-
- #---------------------------------------------------------------------------------
+ 
+ #--------------------------------------------------------------------------------- 
  
  package main ;
  
@@ -126,7 +98,7 @@ App::Chained - Wrapper to sub applications in the Git fashion - No modification 
 
 =head1 DESCRIPTION
 
-This module implements  an application front end to other  applications. As an example, the B<git> command is a front end 
+This module implements  an application front end to other applications. As the B<git> command is a front end 
 to many B<git-*> sub commands
 
 =head1 DOCUMENTATION
@@ -136,7 +108,7 @@ perl scripts, modules or even applications written in other languages. You will 
 nor will you have to  define specific soubrourines/methods in your sub commands. In a word I tried to keep this module as non-intruisive as 
 possible.
 
-Putting a front end to height sub applications took 15 minutes plus another 15 minutes when I decided to have a more advanced command
+Putting a front end to height sub applications took a total of 15 minutes plus another 15 minutes when I decided to have a more advanced command
 completion. More on completion later.
 
 =head2 What you gain
@@ -172,10 +144,10 @@ The Wrapper will handle the following options
 	  # or inherite from any class
 			
 	  my ($self, $command, $arguments) =  @_ ;
-	  system 'ra_check.pl ' . join(' ', @{$arguments}) ;
+	  system 'your_executable ' . join(' ', @{$arguments}) ;
 	  },
 			
-	help => sub {system "ra_check.pl --help"}, # a sub to be run when help required
+	help => sub {system "your_executable --help"}, # a sub to be run when help required
 	apropos => [qw(verify check error test)], # a list of words to match a user apropos query
 	
 	options => sub{ ...}, # See generate_bash_completion below
@@ -186,7 +158,12 @@ The Wrapper will handle the following options
 =head1 EXAMPLE
 
 L<App::Requirement::Arch> (from version 0.02) defines a front end application B<ra> to quite a few sub commands. Check the source
-of B<ra> for a real life example with sub command completion script.
+of the B<ra> script for a real life example with sub command completion script.
+
+=head1 THIS CLASS USES EXIT!
+
+Some of the default handling will result in this module using B<exit> to return from the application wrapper. I may remove the B<exit> in future
+versions as I rather dislike the usage of B<exit> in module.
 
 =head1 SUBROUTINES/METHODS
 
@@ -271,7 +248,7 @@ I<Exceptions> - Dies if an invalid argument is passed
 my ($invocant, @setup_data) = @_ ;
 
 my $class = ref($invocant) || $invocant ;
-confess 'Invalid constructor call!' unless defined $class ;
+confess 'Error: Invalid constructor call!' unless defined $class ;
 
 my $object = {} ;
 
@@ -290,16 +267,13 @@ sub Setup
 
 =head2 [P]Setup
 
-Helper sub called by new. This is a private sub.
+Helper sub called by new.
 
 =cut
 
 my ($self, $package, $file_name, $line, @setup_data) = @_ ;
 
-if (@setup_data % 2)
-	{
-	croak "Invalid number of argument '$file_name, $line'!" ;
-	}
+croak "Error: Invalid number of argument '$file_name, $line'."  if (@setup_data % 2) ;
 
 $self->{INTERACTION}{INFO} ||= sub {print @_} ;
 $self->{INTERACTION}{WARN} ||= \&Carp::carp ;
@@ -315,7 +289,6 @@ $self->CheckOptionNames($NEW_ARGUMENTS, @setup_data) ;
 	NAME                   => 'Anonymous',
 	FILE                   => $file_name,
 	LINE                   => $line,
-	
 	@setup_data,
 	) ;
 
@@ -330,7 +303,7 @@ if($self->{VERBOSE})
 	$self->{INTERACTION}{INFO}('Creating ' . ref($self) . " '$self->{NAME}' at $location.\n") ;
 	}
 
-return(1) ;
+return 1 ;
 }
 
 #-------------------------------------------------------------------------------
@@ -347,10 +320,7 @@ of error.
 
 my ($self, $valid_options, @options) = @_ ;
 
-if (@options % 2)
-	{
-	$self->{INTERACTION}{DIE}->('Invalid number of argument!') ;
-	}
+$self->{INTERACTION}{DIE}->('Invalid number of argument!') if (@options % 2) ;
 
 if('HASH' eq ref $valid_options)
 	{
@@ -417,17 +387,11 @@ my ($self) = @_ ;
 
 my @command_line_arguments = @{$self->{command_line_arguments}} ;
 
-#~ use Data::TreeDumper ;
-#~ print DumpTree \@command_line_arguments, 'before parsing' ;
-
 if(@command_line_arguments)
 	{
-	my @option_definitions = $self->get_options_definitions() ;
-
-	use Getopt::Long qw(:config pass_through);
-	
 	local @ARGV = @command_line_arguments ;
 	
+	my @option_definitions = $self->get_options_definitions() ;
 	GetOptions(@option_definitions);
 	
 	my @arguments_left_on_command_line = @ARGV ;
@@ -435,11 +399,39 @@ if(@command_line_arguments)
 	my $command = shift @arguments_left_on_command_line ;
 	my $options_ok = defined $command ? $command !~ /^-/sxm : 0 ;
 	
+	if($options_ok)
+		{
+		$self->{parsed_command} = $command ;
+		$self->{command_options} = \@arguments_left_on_command_line ;
+		}
+		
 	# run help, faq apropos, ... even if the command line was wrong
+					
+					
 	if(${$self->{getopt_definitions}{h}} ||  ${$self->{getopt_definitions}{help}})
 		{
-		$self->display_help() ;
-		exit(0) ;
+		if(defined $command)
+			{
+			my $command_index = first_index {/$command/} @{$self->{command_line_arguments}} ;
+			my $help_index = first_index {/-(h|help)/} @{$self->{command_line_arguments}} ;
+			
+			if($command_index < $help_index)
+				{
+				# the --help comes after the command. let the command handle it
+				$self->run_help_command($command) ;
+				exit(0) ;
+				}
+			else
+				{
+				$self->display_help() ;
+				exit(0) ;
+				}
+			}
+		else
+			{
+			$self->display_help() ;
+			exit(0) ;
+			}
 		}
 		
 	if(${$self->{getopt_definitions}{version}})
@@ -462,12 +454,9 @@ if(@command_line_arguments)
 		
 	if($options_ok)
 		{
-		$self->{parsed_command} = $command ;
-		$self->{command_options} = \@arguments_left_on_command_line ;
-		
 		if($command eq 'help')	
 			{
-			$self->run_help_command() ;
+			$self->run_help_command($self->{command_options}[0]) ;
 			exit(0) ;
 			}
 		else
@@ -581,7 +570,7 @@ for my $default_option
 
 $self->{getopt_definitions} = \%option_definitions ;
 
-return map {$_->[0], $_->[1]} @{$self->{getopt_data}} ;
+return map {@{$_}[0 .. 1]} @{$self->{getopt_data}} ;
 }
 
 #-------------------------------------------------------------------------------
@@ -622,7 +611,7 @@ if(defined $help)
 else
 	{
 	my $app = ref($self)  ;
-	$self->{INTERACTION}{INFO}("no help defined. Please define one in '$app'.\n\n") ;
+	$self->{INTERACTION}{INFO}("No help defined. Please define one in '$app'.\n\n") ;
 	}
 
 return ;
@@ -630,21 +619,14 @@ return ;
 
 sub get_help_from_pod
 {
-if(system('perldoc', '-V') == 0)
-	{
-	print {*STDERR} `perldoc $PROGRAM_NAME`  or croak 'Error: Can\'t display help!' ; ## no critic (InputOutput::ProhibitBacktickOperators)
-	}
-else
-	{
-	use Pod::Text ;
+use Pod::Text ;
 
-	open my $fh, '<', $PROGRAM_NAME or die "Can't open '$PROGRAM_NAME': $!\n";
-	open my $out, '>', \my $textified_pod or die "Can't redirect to scalar output: $!\n";
-	
-	Pod::Text->new (alt => 1, sentence => 0, width => 78)->parse_from_filehandle($fh, $out) ;
+open my $fh, '<', $PROGRAM_NAME or die "Can't open '$PROGRAM_NAME': $!\n";
+open my $out, '>', \my $textified_pod or die "Can't redirect to scalar output: $!\n";
 
-	print $textified_pod ;
-	}
+Pod::Text->new (alt => 1, sentence => 0, width => 78)->parse_from_filehandle($fh, $out) ;
+
+print $textified_pod ;
 
 exit(1) ;
 }
@@ -745,7 +727,7 @@ if(defined $sub_apps)
 	
 	for my $sub_app_name (sort keys %{$sub_apps})
 		{
-		$commands .= sprintf '  %-22.22s', $sub_app_name ;
+		$commands .= sprintf '  %-25.25s ', $sub_app_name ;
 		$commands .= $sub_apps->{$sub_app_name}{description} || 'no description!.' ;
 		$commands .= "\n" ;
 		}
@@ -777,11 +759,9 @@ I<Exceptions> Dies if a wrong sub command name is used or if the sub command doe
 
 =cut
 
-my ($self) = @_ ;
+my ($self, $command ) = @_ ;
 
 return unless defined $self->{parsed_command} ; 
-
-my $command = $self->{command_options}[0] ; # the sub command to show help for
 
 if(defined $command)
 	{
@@ -808,7 +788,7 @@ if(defined $command)
 		}
 	else
 		{
-		$self->{INTERACTION}{DIE}->("Error: No such command '$command'.") ;
+		$self->{INTERACTION}{DIE}->("Error: No such command '$command'." .  $self->get_command_list() ) ;
 		}
 	}
 else
@@ -961,13 +941,13 @@ my $sub_apps = $self->{sub_apps} ;
 
 if(defined $sub_apps)
 	{
-	for my $sub_app_name (sort keys %{$sub_apps})
+	while(my ($sub_app_name, $sub_app) = each  %{$sub_apps})
 		{
 		my @sub_app_options ;
 		
-		if(exists $sub_apps->{$sub_app_name}{options} && 'CODE' eq ref($sub_apps->{$sub_app_name}{options}))
+		if(exists $sub_app->{options} && 'CODE' eq ref($sub_app->{options}))
 			{
-			@sub_app_options= map {chomp ; $_} $sub_apps->{$sub_app_name}{options}() ;
+			@sub_app_options= map {chomp ; $_} $sub_app->{options}($self, $sub_app, []) ;
 			}
 			
 		push @command_options, "\t$sub_app_name =>  [qw(@sub_app_options)]," ;
@@ -1213,8 +1193,8 @@ else
 			{
 			if(any {/\Q$apropos_option/sxm} @{$sub_apps->{$sub_app_name}{apropos}})
 				{
-				$command .= sprintf '    %-20.20s', $sub_app_name ;
-				$command .= sprintf '    %-20.20s', $sub_apps->{$sub_app_name}{description} || 'no description!.' ;
+				$command .= sprintf '    %-25.25s ', $sub_app_name ;
+				$command .= $sub_apps->{$sub_app_name}{description} || 'no description!.' ;
 				$command .= "\n" ;
 				}
 			}
@@ -1295,7 +1275,7 @@ None so far.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2010 Nadim Khemir.
+Copyright Nadim Khemir 2010.
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of either:

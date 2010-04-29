@@ -12,6 +12,10 @@ t/001_load.t
 t/002_test.t
 t/test_template
 
+example/test_application
+example/test_module.pm
+example/test_wrapper.pl
+
 xt/author/000_distribution.t
 xt/author/000_strict.t
 xt/author/000_fixme.t

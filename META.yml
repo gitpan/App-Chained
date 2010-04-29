@@ -25,4 +25,4 @@ requires:
   Sub::Exporter: 0
 resources:
   license: http://dev.perl.org/licenses/
-version: v0.02.3
+version: v0.02.6
